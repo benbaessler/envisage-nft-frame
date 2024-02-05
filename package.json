@@ -1,0 +1,36 @@
+{
+  "name": "framesjs-starter",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@cowprotocol/ts-dune-client": "^0.0.2",
+    "@farcaster/core": "^0.13.7",
+    "@neynar/nodejs-sdk": "^1.9.4",
+    "@noble/ed25519": "^2.0.0",
+    "frames.js": "*",
+    "next": "14.1.0",
+    "openai": "^4.26.0",
+    "qrcode.react": "^3.1.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "satori": "^0.10.13",
+    "swr": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.1.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "typescript": "^5"
+  }
+}
