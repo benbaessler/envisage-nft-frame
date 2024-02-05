@@ -10,12 +10,8 @@ import {
 } from "frames.js/next/server";
 import { bytesToHexString } from "frames.js";
 import Link from "next/link";
-import {
-  HOST,
-  neynar,
-  openai,
-  pinata,
-} from "./utils";
+import { HOST, neynar, openai, contract, alreadyClaimed } from "./utils";
+import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 
 type State = {
   active: string;
@@ -59,19 +55,30 @@ export default async function Home({
     // TODO: Return an error frame
   }
 
-  // Here: do a server side side effect either sync or async (using await), such as minting an NFT if you want.
-  // example: load the users credentials & check they have an NFT
+  let user;
+  try {
+    const response = await neynar.lookupUserByFid(fid!);
+    user = response.result.user;
+  } catch (error) {
+    // isApiErrorResponse can be used to check for Neynar API errors
+    if (isApiErrorResponse(error)) {
+      console.log("API Error", error.response.data);
+    } else {
+      console.log("Generic Error", error);
+    }
+  }
 
-  // try {
-  //   const user = await neynar.lookupUserByFid(fid!)
-  // } catch (error) {
-  //   // isApiErrorResponse can be used to check for Neynar API errors
-  //   if (isApiErrorResponse(error)) {
-  //     console.log("API Error", error.response.data);
-  //   } else {
-  //     console.log("Generic Error", error);
-  //   }
-  // }
+  const address = user?.custodyAddress;
+
+  if (!address) {
+    // TODO: Return an error frame
+    return;
+  }
+
+  if (await alreadyClaimed(address)) {
+    // TODO: Return an error frame
+    return;
+  }
 
   // Checks if the user tipped at least 999 $DEGEN in the replies
   const cast = await neynar.fetchAllCastsInThread(castHash, fid);
@@ -85,7 +92,7 @@ export default async function Home({
     // TODO: Return an error frame
   }
 
-  // TODO: Generate AI art
+  // Generate AI art
   const image = await openai.images.generate({
     model: "dall-e-3",
     prompt: `A modern art piece themed around '${inputText}'`,
@@ -93,15 +100,14 @@ export default async function Home({
 
   const imageUrl = image.data[0]?.url;
 
-  // TODO: Upload metadata to IPFS
-  const tokenUri = await pinata.pinJSONToIPFS({
+  // Mints the NFT via thirdweb
+  const metadata = {
     name: `"${inputText}"`,
     description: `A modern art piece themed around the concept of '${inputText}'`,
     image: imageUrl,
-  });
+  };
 
-  // TODO: Mint NFT
-
+  const nft = await contract.erc721.mintTo(address, metadata);
 
   console.log(state);
 
