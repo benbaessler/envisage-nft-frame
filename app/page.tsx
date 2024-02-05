@@ -8,6 +8,7 @@ import {
   useFramesReducer,
   validateActionSignature,
 } from "frames.js/next/server";
+import { bytesToHexString } from "frames.js";
 import Link from "next/link";
 import { QueryParameter, DuneClient } from "@cowprotocol/ts-dune-client";
 import { NeynarAPIClient, isApiErrorResponse } from "@neynar/nodejs-sdk";
@@ -43,7 +44,11 @@ export default async function Home({
   const previousFrame = getPreviousFrame<State>(searchParams);
 
   const validMessage = await validateActionSignature(previousFrame.postBody);
+
   const fid = validMessage?.data?.frameActionBody?.castId?.fid;
+  const castHash = bytesToHexString(
+    validMessage?.data?.frameActionBody?.castId?.hash!
+  );
   const inputText = validMessage?.data?.frameActionBody?.inputText;
 
   const [state, dispatch] = useFramesReducer<State>(
@@ -70,9 +75,17 @@ export default async function Home({
   //   }
   // }
 
+  // Checks if the user tipped at least 999 $DEGEN in the replies
+  const cast = await neynar.fetchAllCastsInThread(castHash, fid);
+  const hasTipped = cast.result.casts.some(
+    (c) =>
+      c.author.fid === fid &&
+      /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
+  );
 
-
-  // TODO: check if the user has tipped 999 $DEGEN
+  if (!hasTipped) {
+    // TODO: Return an error frame
+  }
 
   // TODO: Generate AI art
   const image = await openai.images.generate({
