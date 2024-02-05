@@ -10,19 +10,17 @@ import {
 } from "frames.js/next/server";
 import { bytesToHexString } from "frames.js";
 import Link from "next/link";
-import { QueryParameter, DuneClient } from "@cowprotocol/ts-dune-client";
-import { NeynarAPIClient, isApiErrorResponse } from "@neynar/nodejs-sdk";
-import OpenAI from "openai";
+import {
+  HOST,
+  neynar,
+  openai,
+  pinata,
+} from "./utils";
 
 type State = {
   active: string;
   total_button_presses: number;
 };
-
-const HOST = process.env.NEXT_PUBLIC_HOST || "http://localhost:3000";
-const dune = new DuneClient(process.env.DUNE_API_KEY ?? "");
-const neynar = new NeynarAPIClient(process.env.NEYNAR_API_KEY ?? "");
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
 
 const initialState = { active: "1", total_button_presses: 0 };
 
@@ -96,8 +94,14 @@ export default async function Home({
   const imageUrl = image.data[0]?.url;
 
   // TODO: Upload metadata to IPFS
+  const tokenUri = await pinata.pinJSONToIPFS({
+    name: `"${inputText}"`,
+    description: `A modern art piece themed around the concept of '${inputText}'`,
+    image: imageUrl,
+  });
 
   // TODO: Mint NFT
+
 
   console.log(state);
 
