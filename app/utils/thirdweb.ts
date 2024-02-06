@@ -1,5 +1,6 @@
 import { BaseSepoliaTestnet } from "@thirdweb-dev/chains";
 import { ThirdwebSDK } from "@thirdweb-dev/sdk";
+import { contractAddress } from "./constants";
 
 export const thirdweb = ThirdwebSDK.fromPrivateKey(
   process.env.PRIVATE_KEY!,
@@ -9,10 +10,7 @@ export const thirdweb = ThirdwebSDK.fromPrivateKey(
   }
 );
 
-export const contract = await thirdweb.getContract(
-  // testnet contract
-  "0xA188155E15490f293eD800Bc3b3d3394E80E535D"
-);
+export const contract = await thirdweb.getContract(contractAddress);
 
 export const alreadyClaimed = async (address: string) => {
   const balance = await contract.erc721.balanceOf(address);
