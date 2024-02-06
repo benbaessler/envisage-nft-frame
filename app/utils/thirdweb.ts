@@ -10,9 +10,12 @@ export const thirdweb = ThirdwebSDK.fromPrivateKey(
   }
 );
 
-export const contract = await thirdweb.getContract(contractAddress);
+export const contract = await thirdweb.getContract(
+  contractAddress,
+  "nft-collection"
+);
 
-export const alreadyClaimed = async (address: string) => {
-  const balance = await contract.erc721.balanceOf(address);
+export const alreadyClaimed = async (address: string): Promise<boolean> => {
+  const balance = await contract.balanceOf(address);
   return balance.toNumber() > 0;
 };
