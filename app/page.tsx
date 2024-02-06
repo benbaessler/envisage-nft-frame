@@ -19,6 +19,7 @@ import {
   alreadyClaimed,
   contract,
   contractAddress,
+  supplyMinted,
 } from "./utils";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 
@@ -78,6 +79,21 @@ export default async function Home({
         );
       }
 
+      // Checks if supply was minted
+      // TODO: create image
+      if (await supplyMinted()) {
+        return (
+          <FrameContainer
+            postUrl="/frames"
+            state={state}
+            previousFrame={previousFrame}
+          >
+            <FrameImage src={`${HOST}/supply-minted.png`} />
+            <FrameButton onClick={dispatch}>OOS</FrameButton>
+          </FrameContainer>
+        );
+      }
+
       const address = await getAddressForFid({ fid });
 
       // Checks if the user has a wallet connected
@@ -111,6 +127,8 @@ export default async function Home({
         );
       }
 
+      // TODO: Check if input was already used
+
       // Checks if the user tipped at least 999 $DEGEN in the replies
       const cast = await neynar.fetchAllCastsInThread(castHash, fid);
       const hasTipped = cast.result.casts.some(
@@ -139,13 +157,11 @@ export default async function Home({
         prompt: `A modern art piece themed around '${inputText}'`,
       });
 
-      const imageUrl = image.data[0]?.url;
-
       // Mints the NFT via thirdweb
       const metadata = {
         name: `"${inputText.charAt(0).toUpperCase() + inputText.slice(1)}"`,
         description: `A modern art piece themed around the concept of '${inputText}'`,
-        image: imageUrl,
+        image: image.data[0]?.url,
       };
 
       const nft = await contract.mintTo(address, metadata);
