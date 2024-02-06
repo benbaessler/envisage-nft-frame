@@ -5,34 +5,92 @@ export const LoginWindow = ({
   farcasterUser,
   loading,
   startFarcasterSignerProcess,
+  impersonateUser,
+  logout,
 }: {
   farcasterUser: FarcasterUser | null;
   loading: boolean;
   startFarcasterSignerProcess: () => void;
+  impersonateUser: (opts: { fid: number }) => void;
+  logout: () => void;
 }) => {
   return (
     <div>
       <div style={{ minWidth: "150px" }}>
         <div>
-          {farcasterUser?.status === "approved"
-            ? farcasterUser.fid
-              ? `Signed in as ${farcasterUser?.fid}`
-              : "Something is wrong..."
-            : farcasterUser?.status === "pending_approval"
-              ? "Approve in Warpcast"
-              : "Sign in"}
+          {farcasterUser?.status === "approved" ? (
+            farcasterUser.fid ? (
+              <div>
+                Signed in as {farcasterUser?.fid}{" "}
+                <button onClick={logout}>Logout</button>
+              </div>
+            ) : (
+              "Something is wrong..."
+            )
+          ) : farcasterUser?.status === "impersonating" ? (
+            <div>
+              Impersonating fid (for testing):{farcasterUser?.fid}{" "}
+              <button onClick={logout}>Logout</button>
+            </div>
+          ) : farcasterUser?.status === "pending_approval" ? (
+            "Approve in Warpcast"
+          ) : (
+            <h2>Sign in to test buttons</h2>
+          )}
         </div>
         <div>
           {!farcasterUser?.status && (
-            <button
-              style={{
-                cursor: loading ? "not-allowed" : "pointer",
-              }}
-              onClick={startFarcasterSignerProcess}
-              disabled={loading}
-            >
-              {loading ? "Loading..." : "Sign in with farcaster"}
-            </button>
+            <div>
+              <form
+                action=""
+                onSubmit={async (e: any) => {
+                  e.preventDefault();
+                  impersonateUser({ fid: 1 });
+                }}
+              >
+                <button
+                  style={{
+                    cursor: loading ? "not-allowed" : "pointer",
+                  }}
+                  type="submit"
+                  disabled={loading}
+                >
+                  Impersonate fid: 1
+                </button>
+              </form>
+              <div>or</div>
+              <form
+                action=""
+                onSubmit={async (e: any) => {
+                  e.preventDefault();
+                  const { value: fid } = e.target[0] as HTMLInputElement;
+                  impersonateUser({ fid: parseInt(fid) });
+                }}
+              >
+                <input type="text" placeholder="FID to impersonate" />{" "}
+                <button
+                  style={{
+                    cursor: loading ? "not-allowed" : "pointer",
+                  }}
+                  type="submit"
+                  disabled={loading}
+                >
+                  Impersonate
+                </button>
+              </form>
+
+              <div>or</div>
+
+              <button
+                style={{
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+                onClick={startFarcasterSignerProcess}
+                disabled={loading}
+              >
+                {loading ? "Loading..." : "Sign in with farcaster"}
+              </button>
+            </div>
           )}
           {farcasterUser?.status === "pending_approval" &&
             farcasterUser?.signerApprovalUrl && (
