@@ -4,17 +4,21 @@ import {
   FrameImage,
   FrameInput,
   FrameReducer,
+  NextServerPageProps,
   getPreviousFrame,
   useFramesReducer,
   validateActionSignature,
 } from "frames.js/next/server";
-import { bytesToHexString } from "frames.js";
+import { bytesToHexString, getAddressForFid } from "frames.js";
 import Link from "next/link";
+import { DEBUG_HUB_OPTIONS } from "./debug/constants";
 import {
   HOST,
   neynar,
   openai,
   alreadyClaimed,
+  contract,
+  contractAddress,
 } from "./utils";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 
@@ -36,13 +40,15 @@ const reducer: FrameReducer<State> = (state, action) => {
 
 // This is a react server component only
 export default async function Home({
+  params,
   searchParams,
-}: {
-  searchParams: Record<string, string>;
-}) {
+}: NextServerPageProps) {
   const previousFrame = getPreviousFrame<State>(searchParams);
 
-  const validMessage = await validateActionSignature(previousFrame.postBody);
+  const validMessage = await validateActionSignature(
+    previousFrame.postBody,
+    DEBUG_HUB_OPTIONS
+  );
 
   const [state, dispatch] = useFramesReducer<State>(
     reducer,
@@ -52,11 +58,11 @@ export default async function Home({
 
   if (state.page === "minting") {
     try {
-      const fid = validMessage?.data?.frameActionBody?.castId?.fid;
+      const fid = validMessage?.data?.frameActionBody?.castId?.fid!;
       const castHash = bytesToHexString(
         validMessage?.data?.frameActionBody?.castId?.hash!
       );
-      const inputText = validMessage?.data?.frameActionBody?.inputText;
+      const inputText = previousFrame.postBody?.untrustedData.inputText;
 
       if (!inputText) {
         return (
@@ -72,10 +78,10 @@ export default async function Home({
         );
       }
 
-      const response = await neynar.lookupUserByFid(fid!);
-      const user = response.result.user;
+      const address = await getAddressForFid({ fid });
 
-      if (!user?.custodyAddress) {
+      // Checks if the user has a wallet connected
+      if (!address) {
         return (
           <FrameContainer
             postUrl="/frames"
@@ -89,7 +95,7 @@ export default async function Home({
         );
       }
 
-      const address = user.custodyAddress;
+      // Checks if the user has already claimed an NFT
       const claimed = await alreadyClaimed(address);
       if (claimed) {
         return (
@@ -128,23 +134,21 @@ export default async function Home({
       }
 
       // Generate AI art
-      // const image = await openai.images.generate({
-      //   model: "dall-e-3",
-      //   prompt: `A modern art piece themed around '${inputText}'`,
-      // });
+      const image = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: `A modern art piece themed around '${inputText}'`,
+      });
 
-      // const imageUrl = image.data[0]?.url;
+      const imageUrl = image.data[0]?.url;
 
       // Mints the NFT via thirdweb
       const metadata = {
-        name: `"${inputText}"`,
+        name: `"${inputText.charAt(0).toUpperCase() + inputText.slice(1)}"`,
         description: `A modern art piece themed around the concept of '${inputText}'`,
-        // image: imageUrl,
-        image: "https://i.imgur.com/3g6Z3ZG.png",
+        image: imageUrl,
       };
 
-      // const nft = await contract.mintTo(address, metadata);
-
+      const nft = await contract.mintTo(address, metadata);
       return (
         <FrameContainer
           postUrl="/frames"
@@ -153,8 +157,7 @@ export default async function Home({
         >
           <FrameImage src={`${HOST}/success.png`} />
           <FrameButton
-            // href={`https://opensea.io/assets/base/${contractAddress}/${nft.id}`}
-            href="https://opensea.io"
+            href={`https://opensea.io/assets/base/${contractAddress}/${nft.id}`}
           >
             View
           </FrameButton>
