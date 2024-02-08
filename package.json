@@ -10,15 +10,11 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@cowprotocol/ts-dune-client": "^0.0.2",
-    "@farcaster/core": "^0.13.7",
     "@neynar/nodejs-sdk": "^1.9.4",
     "@noble/ed25519": "^2.0.0",
-    "@pinata/sdk": "^2.1.0",
     "@prisma/client": "^5.9.1",
     "@thirdweb-dev/sdk": "^4.0.33",
-    "ethers": "5",
-    "frames.js": "*",
+    "frames.js": "0.2.0",
     "next": "13.5.6",
     "openai": "^4.26.0",
     "prisma": "^5.9.1",
