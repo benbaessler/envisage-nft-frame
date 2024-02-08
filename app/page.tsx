@@ -85,7 +85,6 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/missing-prompt.png`} />
-            <FrameInput text="A word or phrase to envisage" />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
@@ -105,9 +104,9 @@ export default async function Home({
         );
       }
 
-      const address = await getAddressForFid({ fid });
-
+      
       // Checks if the user has a wallet connected
+      const address = await getAddressForFid({ fid });
       if (!address) {
         return (
           <FrameContainer
@@ -116,7 +115,6 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/no-wallet.png`} />
-            <FrameInput text="A word or phrase to envisage" />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
@@ -132,7 +130,6 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/already-claimed.png`} />
-            <FrameInput text="A word or phrase to envisage" />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
@@ -151,7 +148,6 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/taken.png`} />
-            <FrameInput text="A word or phrase to envisage" />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
@@ -159,7 +155,6 @@ export default async function Home({
 
       // Checks if the user tipped at least 999 $DEGEN in the replies
       const cast = await neynar.fetchAllCastsInThread(castHash, fid);
-      console.log(fid);
       const hasTipped = cast.result.casts.some(
         (c) =>
           c.author.fid === fid &&
@@ -174,7 +169,6 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/no-tip.png`} />
-            <FrameInput text="A word or phrase to envisage" />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
@@ -182,18 +176,11 @@ export default async function Home({
 
       // Stores input in database
       try {
-        Promise.all([
-          await prisma.prompt.create({
-            data: {
-              id: inputText.toLowerCase(),
-            },
-          }),
-          await prisma.minting.create({
-            data: {
-              fid,
-            },
-          }),
-        ]);
+        await prisma.prompt.create({
+          data: {
+            id: inputText.toLowerCase(),
+          },
+        });
       } catch (error) {
         return (
           <FrameContainer
@@ -201,7 +188,7 @@ export default async function Home({
             state={state}
             previousFrame={previousFrame}
           >
-            <FrameImage src={`${HOST}/please-wait.png`} />
+            <FrameImage src={`${HOST}/taken.png`} />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
@@ -219,16 +206,11 @@ export default async function Home({
         name: `"${inputText.charAt(0).toUpperCase() + inputText.slice(1)}"`,
         description: `A unique, AI-generated artwork minted via a Farcaster Frame with $DEGEN tips.`,
         image: image.data[0]?.url,
+        // image: "https://i.imgur.com/REU1ZgF.png",
       };
 
       console.log("minting");
       const nft = await contract.mintTo(address, metadata);
-
-      await prisma.minting.delete({
-        where: {
-          fid,
-        },
-      });
 
       return (
         <FrameContainer
@@ -251,6 +233,7 @@ export default async function Home({
       } else {
         console.log("Generic Error", error);
       }
+
       return (
         <FrameContainer
           postUrl="/frames"
@@ -258,7 +241,6 @@ export default async function Home({
           previousFrame={previousFrame}
         >
           <FrameImage src={`${HOST}/error.png`} />
-          <FrameInput text="A word or phrase to envisage" />
           <FrameButton onClick={dispatch}>Try again</FrameButton>
         </FrameContainer>
       );
