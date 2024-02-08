@@ -11,7 +11,3 @@ datasource db {
 model Prompt {
   id String @id @default(cuid())
 }
-
-model Minting {
-  fid Int @id
-}
