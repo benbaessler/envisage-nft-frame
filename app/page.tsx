@@ -7,26 +7,23 @@ import {
   NextServerPageProps,
   getPreviousFrame,
   useFramesReducer,
-  validateActionSignature,
+  getFrameMessage,
 } from "frames.js/next/server";
-import {
-  bytesToHexString,
-  getAddressForFid,
-  getFrameMessageFromRequestBody,
-} from "frames.js";
 import Link from "next/link";
 import { DEBUG_HUB_OPTIONS } from "./debug/constants";
-import prisma from "./lib/prisma";
+import { getAddressForFid, getTokenUrl } from "frames.js";
+import { request } from "http";
 import {
-  HOST,
-  neynar,
-  openai,
   alreadyClaimed,
   contract,
   contractAddress,
+  generateAndSetImage,
+  neynar,
   supplyMinted,
 } from "./utils";
+import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
+import { generateQueue } from "./api/queues/generate";
 
 type State = {
   page: string;
@@ -51,10 +48,14 @@ export default async function Home({
 }: NextServerPageProps) {
   const previousFrame = getPreviousFrame<State>(searchParams);
 
-  const validMessage = await validateActionSignature(
-    previousFrame.postBody,
-    DEBUG_HUB_OPTIONS
-  );
+  const frameMessage = await getFrameMessage(previousFrame.postBody, {
+    hubHttpUrl: "https://nemes.farcaster.xyz:2281",
+    fetchHubContext: true,
+  });
+
+  if (frameMessage && !frameMessage?.isValid) {
+    throw new Error("Invalid frame payload");
+  }
 
   const [state, dispatch] = useFramesReducer<State>(
     reducer,
@@ -62,195 +63,200 @@ export default async function Home({
     previousFrame
   );
 
-  console.log(state);
+  // Here: do a server side side effect either sync or async (using await), such as minting an NFT if you want.
+  // example: load the users credentials & check they have an NFT
 
-  if (state.page === "minting") {
-    try {
-      const frameMessage = getFrameMessageFromRequestBody(
-        previousFrame.postBody!
-      );
+  console.log("info: state is:", state);
 
-      const fid = frameMessage.data?.fid!;
+  const HOST = process.env.NEXT_PUBLIC_baseUrl || "http://localhost:3000";
 
-      const castHash = bytesToHexString(
-        frameMessage.data?.frameActionBody?.castId?.hash!
-      );
-      const inputText = previousFrame.postBody?.untrustedData.inputText;
+  if (frameMessage) {
+    const { inputText, castId, requesterFid } = frameMessage;
 
-      if (!inputText) {
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/missing-prompt.png`} />
-            <FrameButton onClick={dispatch}>Try again</FrameButton>
-          </FrameContainer>
-        );
-      }
-
-      // Checks if supply was minted
-      if (await supplyMinted()) {
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/supply-minted.png`} />
-            <FrameButton onClick={() => {}}>Sold out</FrameButton>
-          </FrameContainer>
-        );
-      }
-
-      
-      // Checks if the user has a wallet connected
-      const address = await getAddressForFid({ fid });
-      if (!address) {
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/no-wallet.png`} />
-            <FrameButton onClick={dispatch}>Try again</FrameButton>
-          </FrameContainer>
-        );
-      }
-
-      // Checks if the user has already claimed an NFT
-      const claimed = await alreadyClaimed(address);
-      if (claimed) {
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/already-claimed.png`} />
-            <FrameButton onClick={dispatch}>Try again</FrameButton>
-          </FrameContainer>
-        );
-      }
-
-      // Checks if input was already used
-      const promptUsed = await prisma.prompt.findUnique({
-        where: { id: inputText.toLowerCase() },
-      });
-
-      if (promptUsed) {
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/taken.png`} />
-            <FrameButton onClick={dispatch}>Try again</FrameButton>
-          </FrameContainer>
-        );
-      }
-
-      // Checks if the user tipped at least 999 $DEGEN in the replies
-      const cast = await neynar.fetchAllCastsInThread(castHash, fid);
-      const hasTipped = cast.result.casts.some(
-        (c) =>
-          c.author.fid === fid &&
-          /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
-      );
-
-      if (!hasTipped) {
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/no-tip.png`} />
-            <FrameButton onClick={dispatch}>Try again</FrameButton>
-          </FrameContainer>
-        );
-      }
-
-      // Stores input in database
+    if (state.page === "minting") {
       try {
-        await prisma.prompt.create({
-          data: {
-            id: inputText.toLowerCase(),
-          },
+        const castHash = "0xb81fe6fa2541efd2c9be281538c63cbae5c13987";
+        // const cashHash = castId?.hash!;
+
+        if (!inputText) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/missing-prompt.png`} />
+              <FrameButton onClick={dispatch}>Try again</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        const formattedInput =
+          inputText.charAt(0).toUpperCase() + inputText.slice(1);
+
+        // Checks if supply was minted
+        if (await supplyMinted()) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/supply-minted.png`} />
+              <FrameButton onClick={() => {}}>Sold out</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        // Checks if the user has a wallet connected
+        const address = await getAddressForFid({ fid: requesterFid });
+        if (!address) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/no-wallet.png`} />
+              <FrameButton onClick={dispatch}>Try again</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        // Checks if the user has already claimed an NFT
+        const claimed = await alreadyClaimed(address);
+        if (claimed) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/already-claimed.png`} />
+              <FrameButton onClick={dispatch}>Try again</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        // Checks if input was already used
+        const promptUsed = await prisma.prompt.findUnique({
+          where: { id: inputText.toLowerCase() },
         });
-      } catch (error) {
+
+        if (promptUsed) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/taken.png`} />
+              <FrameButton onClick={dispatch}>Try again</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        // Checks if the user tipped at least 999 $DEGEN in the replies
+        const cast = await neynar.fetchAllCastsInThread(
+          castHash,
+          requesterFid
+        );
+        const hasTipped = cast.result.casts.some(
+          (c) =>
+            c.author.fid === requesterFid &&
+            /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
+        );
+
+        if (!hasTipped) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/no-tip.png`} />
+              <FrameButton onClick={dispatch}>Try again</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        // Stores input in database
+        try {
+          await prisma.prompt.create({
+            data: {
+              id: inputText.toLowerCase(),
+            },
+          });
+        } catch (error) {
+          return (
+            <FrameContainer
+              postUrl="/frames"
+              state={state}
+              previousFrame={previousFrame}
+            >
+              <FrameImage src={`${HOST}/taken.png`} />
+              <FrameButton onClick={dispatch}>Try again</FrameButton>
+            </FrameContainer>
+          );
+        }
+
+        // Mints the NFT via thirdweb
+        const metadata = {
+          name: `"${formattedInput}"`,
+          description: `A unique, AI-generated artwork minted via a Farcaster Frame with $DEGEN tips.`,
+          image: "ipfs://QmPF9sDizL5AHCaw1PsZhrua4a1r6AZNxkkFNv8Qz1zi7y",
+        };
+
+        console.log("minting NFT");
+        const nft = await contract.mintTo(address, metadata);
+
+        // Generate AI art
+        // TODO: convert into slow request with vercel
+        generateAndSetImage(nft.id, formattedInput);
+
         return (
           <FrameContainer
             postUrl="/frames"
             state={state}
             previousFrame={previousFrame}
           >
-            <FrameImage src={`${HOST}/taken.png`} />
+            <FrameImage src={`${HOST}/success.png`} />
+            <FrameButton
+              href={`https://testnets.opensea.io/assets/base-sepolia/${contractAddress}/${nft.id}`}
+            >
+              View
+            </FrameButton>
+          </FrameContainer>
+        );
+      } catch (error) {
+        // isApiErrorResponse can be used to check for Neynar API errors
+        if (isApiErrorResponse(error)) {
+          console.log("API Error", error.response.data);
+        } else {
+          console.log("Generic Error", error);
+        }
+
+        return (
+          <FrameContainer
+            postUrl="/frames"
+            state={state}
+            previousFrame={previousFrame}
+          >
+            <FrameImage src={`${HOST}/error.png`} />
             <FrameButton onClick={dispatch}>Try again</FrameButton>
           </FrameContainer>
         );
       }
-
-      // Generate AI art
-      console.log("generating");
-      const image = await openai.images.generate({
-        model: "dall-e-3",
-        prompt: `A modern art piece themed around the concept of '${inputText}'`,
-      });
-
-      // Mints the NFT via thirdweb
-      const metadata = {
-        name: `"${inputText.charAt(0).toUpperCase() + inputText.slice(1)}"`,
-        description: `A unique, AI-generated artwork minted via a Farcaster Frame with $DEGEN tips.`,
-        image: image.data[0]?.url,
-        // image: "https://i.imgur.com/REU1ZgF.png",
-      };
-
-      console.log("minting");
-      const nft = await contract.mintTo(address, metadata);
-
-      return (
-        <FrameContainer
-          postUrl="/frames"
-          state={state}
-          previousFrame={previousFrame}
-        >
-          <FrameImage src={`${HOST}/success.png`} />
-          <FrameButton
-            href={`https://opensea.io/assets/base/${contractAddress}/${nft.id}`}
-          >
-            View
-          </FrameButton>
-        </FrameContainer>
-      );
-    } catch (error) {
-      // isApiErrorResponse can be used to check for Neynar API errors
-      if (isApiErrorResponse(error)) {
-        console.log("API Error", error.response.data);
-      } else {
-        console.log("Generic Error", error);
-      }
-
-      return (
-        <FrameContainer
-          postUrl="/frames"
-          state={state}
-          previousFrame={previousFrame}
-        >
-          <FrameImage src={`${HOST}/error.png`} />
-          <FrameButton onClick={dispatch}>Try again</FrameButton>
-        </FrameContainer>
-      );
     }
   }
 
   // then, when done, return next frame
   return (
-    <div>
-      Starter kit. <Link href="/debug">Debug</Link>
+    <div className="p-4">
+      frames.js starter kit.{" "}
+      <Link href={`/debug?url=${HOST}`} className="underline">
+        Debug
+      </Link>
       <FrameContainer
         postUrl="/frames"
         state={state}
