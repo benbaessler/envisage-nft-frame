@@ -16,7 +16,7 @@ export const LoginWindow = ({
 }) => {
   return (
     <div>
-      <div style={{ minWidth: "150px" }}>
+      <div style={{ minWidth: "150px" }} className="mt-4">
         <div>
           {farcasterUser?.status === "approved" ? (
             farcasterUser.fid ? (
@@ -29,8 +29,18 @@ export const LoginWindow = ({
             )
           ) : farcasterUser?.status === "impersonating" ? (
             <div>
-              Impersonating fid (for testing):{farcasterUser?.fid}{" "}
-              <button onClick={logout}>Logout</button>
+              Impersonating fid: <b>{farcasterUser?.fid}</b>,{" "}
+              <button className="underline" onClick={logout}>
+                Logout
+              </button>
+              <p>
+                <span className=" text-slate-400">
+                  *Impersonation only works for testing local frames using
+                  frames.js to validate messages, as they&apos;re mocked. It
+                  uses the `cast.fid` of `1` and `cast.hash` value of
+                  `0x00...00` as the frame context in payloads.
+                </span>{" "}
+              </p>
             </div>
           ) : farcasterUser?.status === "pending_approval" ? (
             "Approve in Warpcast"
@@ -52,6 +62,7 @@ export const LoginWindow = ({
                   style={{
                     cursor: loading ? "not-allowed" : "pointer",
                   }}
+                  className="underline"
                   type="submit"
                   disabled={loading}
                 >
@@ -72,6 +83,7 @@ export const LoginWindow = ({
                   style={{
                     cursor: loading ? "not-allowed" : "pointer",
                   }}
+                  className="underline"
                   type="submit"
                   disabled={loading}
                 >
@@ -85,10 +97,13 @@ export const LoginWindow = ({
                 style={{
                   cursor: loading ? "not-allowed" : "pointer",
                 }}
+                className="underline"
                 onClick={startFarcasterSignerProcess}
                 disabled={loading}
               >
-                {loading ? "Loading..." : "Sign in with farcaster"}
+                {loading
+                  ? "Loading..."
+                  : "Sign in with farcaster (costs warps once, works with remote frames and other libs)"}
               </button>
             </div>
           )}
@@ -101,6 +116,7 @@ export const LoginWindow = ({
                 <a
                   href={farcasterUser.signerApprovalUrl}
                   target="_blank"
+                  className="underline"
                   rel="noopener noreferrer"
                 >
                   <button>open url</button>
