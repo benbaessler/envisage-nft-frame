@@ -14,6 +14,7 @@ import { DEBUG_HUB_OPTIONS } from "./debug/constants";
 import { getAddressForFid, getTokenUrl } from "frames.js";
 import { request } from "http";
 import {
+  HOST,
   alreadyClaimed,
   contract,
   contractAddress,
@@ -23,7 +24,21 @@ import {
 } from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
-import { generateQueue } from "./api/queues/generate";
+import { Metadata } from "next";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Envisage NFT Generator",
+    description:
+      "Generate your own unique, generative AI art piece in a Farcaster Frame for $DEGEN.",
+    openGraph: {
+      title: "Envisage NFT Generator",
+      description:
+        "Generate your own unique, generative AI art piece in a Farcaster Frame for $DEGEN.",
+      images: [`${HOST}/cover.png`],
+    },
+  };
+}
 
 type State = {
   page: string;
@@ -46,6 +61,17 @@ export default async function Home({
   params,
   searchParams,
 }: NextServerPageProps) {
+  const ErrorPage = ({ image }: { image: string }) => (
+    <FrameContainer
+      postUrl="/frames"
+      state={state}
+      previousFrame={previousFrame}
+    >
+      <FrameImage src={`${HOST}/${image}.png`} />
+      <FrameButton onClick={dispatch}>Try again</FrameButton>
+    </FrameContainer>
+  );
+
   const previousFrame = getPreviousFrame<State>(searchParams);
 
   const frameMessage = await getFrameMessage(previousFrame.postBody, {
@@ -68,8 +94,6 @@ export default async function Home({
 
   console.log("info: state is:", state);
 
-  const HOST = process.env.NEXT_PUBLIC_baseUrl || "http://localhost:3000";
-
   if (frameMessage) {
     const { inputText, castId, requesterFid } = frameMessage;
 
@@ -78,107 +102,38 @@ export default async function Home({
         const castHash = "0xb81fe6fa2541efd2c9be281538c63cbae5c13987";
         // const cashHash = castId?.hash!;
 
-        if (!inputText) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/missing-prompt.png`} />
-              <FrameButton onClick={dispatch}>Try again</FrameButton>
-            </FrameContainer>
-          );
-        }
+        if (!inputText) return ErrorPage({ image: "missing-prompt" });
 
         const formattedInput =
           inputText.charAt(0).toUpperCase() + inputText.slice(1);
 
         // Checks if supply was minted
-        if (await supplyMinted()) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/supply-minted.png`} />
-              <FrameButton onClick={() => {}}>Sold out</FrameButton>
-            </FrameContainer>
-          );
-        }
+        if (await supplyMinted()) return ErrorPage({ image: "supply-minted" });
 
         // Checks if the user has a wallet connected
         const address = await getAddressForFid({ fid: requesterFid });
-        if (!address) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/no-wallet.png`} />
-              <FrameButton onClick={dispatch}>Try again</FrameButton>
-            </FrameContainer>
-          );
-        }
+        if (!address) return ErrorPage({ image: "no-wallet" });
 
         // Checks if the user has already claimed an NFT
         const claimed = await alreadyClaimed(address);
-        if (claimed) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/already-claimed.png`} />
-              <FrameButton onClick={dispatch}>Try again</FrameButton>
-            </FrameContainer>
-          );
-        }
+        if (claimed) return ErrorPage({ image: "already-claimed" });
 
         // Checks if input was already used
         const promptUsed = await prisma.prompt.findUnique({
           where: { id: inputText.toLowerCase() },
         });
 
-        if (promptUsed) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/taken.png`} />
-              <FrameButton onClick={dispatch}>Try again</FrameButton>
-            </FrameContainer>
-          );
-        }
+        if (promptUsed) return ErrorPage({ image: "taken" });
 
         // Checks if the user tipped at least 999 $DEGEN in the replies
-        const cast = await neynar.fetchAllCastsInThread(
-          castHash,
-          requesterFid
-        );
+        const cast = await neynar.fetchAllCastsInThread(castHash, requesterFid);
         const hasTipped = cast.result.casts.some(
           (c) =>
             c.author.fid === requesterFid &&
             /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
         );
 
-        if (!hasTipped) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/no-tip.png`} />
-              <FrameButton onClick={dispatch}>Try again</FrameButton>
-            </FrameContainer>
-          );
-        }
+        if (!hasTipped) return ErrorPage({ image: "no-tip" });
 
         // Stores input in database
         try {
@@ -188,16 +143,7 @@ export default async function Home({
             },
           });
         } catch (error) {
-          return (
-            <FrameContainer
-              postUrl="/frames"
-              state={state}
-              previousFrame={previousFrame}
-            >
-              <FrameImage src={`${HOST}/taken.png`} />
-              <FrameButton onClick={dispatch}>Try again</FrameButton>
-            </FrameContainer>
-          );
+          return ErrorPage({ image: "taken" });
         }
 
         // Mints the NFT via thirdweb
@@ -236,16 +182,7 @@ export default async function Home({
           console.log("Generic Error", error);
         }
 
-        return (
-          <FrameContainer
-            postUrl="/frames"
-            state={state}
-            previousFrame={previousFrame}
-          >
-            <FrameImage src={`${HOST}/error.png`} />
-            <FrameButton onClick={dispatch}>Try again</FrameButton>
-          </FrameContainer>
-        );
+        return ErrorPage({ image: "error" });
       }
     }
   }
