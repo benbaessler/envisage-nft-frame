@@ -2,8 +2,8 @@ import { inngest } from "./client";
 import { openai, contract } from "../utils";
 
 export const generateMetadata = inngest.createFunction(
-  { id: "mint-nft" },
-  { event: "mint-nft" },
+  { id: "generate-metadata" },
+  { event: "generate-metadata" },
   async ({ event }) => {
     const { tokenId, prompt } = event.data;
 
