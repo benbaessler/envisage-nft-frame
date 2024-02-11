@@ -10,21 +10,19 @@ import {
   getFrameMessage,
 } from "frames.js/next/server";
 import Link from "next/link";
-import { DEBUG_HUB_OPTIONS } from "./debug/constants";
-import { getAddressForFid, getTokenUrl } from "frames.js";
-import { request } from "http";
+import { getAddressForFid } from "frames.js";
 import {
   HOST,
   alreadyClaimed,
   contract,
   contractAddress,
-  generateAndSetImage,
   neynar,
   supplyMinted,
 } from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 import { Metadata } from "next";
+import { inngest } from "./inngest/client";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -114,13 +112,15 @@ export default async function Home({
             prisma.prompt.findUnique({
               where: { id: inputText.toLowerCase() },
             }),
-            neynar.fetchAllCastsInThread(castHash, requesterFid).then((cast) =>
-              cast.result.casts.some(
-                (c) =>
-                  c.author.fid === requesterFid &&
-                  /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
-              )
-            ),
+            neynar
+              .fetchAllCastsInThread(castHash, requesterFid)
+              .then((cast) =>
+                cast.result.casts.some(
+                  (c) =>
+                    c.author.fid === requesterFid &&
+                    /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
+                )
+              ),
           ]);
 
         // Checks if supply was minted
@@ -149,15 +149,20 @@ export default async function Home({
           return ErrorPage({ image: "taken" });
         }
 
-        // Mints the NFT via thirdweb
-        const metadata = {
+        console.time("minting NFT");
+        const nft = await contract.mintTo(address, {
           name: `"${formattedInput}"`,
           description: `A unique, AI-generated artwork minted via a Farcaster Frame with $DEGEN tips.`,
           image: "ipfs://QmPF9sDizL5AHCaw1PsZhrua4a1r6AZNxkkFNv8Qz1zi7y",
-        };
+        });
 
-        console.log("minting NFT");
-        const nft = await contract.mintTo(address, metadata);
+        await inngest.send({
+          name: "generate-metadata",
+          data: {
+            tokenId: nft.id,
+            prompt: formattedInput,
+          },
+        });
 
         return (
           <FrameContainer
@@ -180,7 +185,6 @@ export default async function Home({
         } else {
           console.log("Generic Error", error);
         }
-
         return ErrorPage({ image: "error" });
       }
     }
