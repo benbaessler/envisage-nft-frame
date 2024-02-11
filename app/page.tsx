@@ -107,32 +107,35 @@ export default async function Home({
         const formattedInput =
           inputText.charAt(0).toUpperCase() + inputText.slice(1);
 
+        const [isSupplyMinted, address, promptUsed, hasTipped] =
+          await Promise.all([
+            supplyMinted(),
+            getAddressForFid({ fid: requesterFid }),
+            prisma.prompt.findUnique({
+              where: { id: inputText.toLowerCase() },
+            }),
+            neynar.fetchAllCastsInThread(castHash, requesterFid).then((cast) =>
+              cast.result.casts.some(
+                (c) =>
+                  c.author.fid === requesterFid &&
+                  /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
+              )
+            ),
+          ]);
+
         // Checks if supply was minted
-        if (await supplyMinted()) return ErrorPage({ image: "supply-minted" });
+        if (isSupplyMinted) return ErrorPage({ image: "supply-minted" });
 
         // Checks if the user has a wallet connected
-        const address = await getAddressForFid({ fid: requesterFid });
         if (!address) return ErrorPage({ image: "no-wallet" });
 
         // Checks if the user has already claimed an NFT
         const claimed = await alreadyClaimed(address);
         if (claimed) return ErrorPage({ image: "already-claimed" });
 
-        // Checks if input was already used
-        const promptUsed = await prisma.prompt.findUnique({
-          where: { id: inputText.toLowerCase() },
-        });
-
         if (promptUsed) return ErrorPage({ image: "taken" });
 
         // Checks if the user tipped at least 999 $DEGEN in the replies
-        const cast = await neynar.fetchAllCastsInThread(castHash, requesterFid);
-        const hasTipped = cast.result.casts.some(
-          (c) =>
-            c.author.fid === requesterFid &&
-            /(?:[1-9]\d{2,}|\d{4,})\s\$degen/.test(c.text.toLowerCase())
-        );
-
         if (!hasTipped) return ErrorPage({ image: "no-tip" });
 
         // Stores input in database
@@ -155,10 +158,6 @@ export default async function Home({
 
         console.log("minting NFT");
         const nft = await contract.mintTo(address, metadata);
-
-        // Generate AI art
-        // TODO: convert into slow request with vercel
-        generateAndSetImage(nft.id, formattedInput);
 
         return (
           <FrameContainer
