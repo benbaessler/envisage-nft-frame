@@ -14,6 +14,7 @@
     "@noble/ed25519": "^2.0.0",
     "@prisma/client": "^5.9.1",
     "@thirdweb-dev/sdk": "^4.0.33",
+    "ethers": "5",
     "frames.js": "^0.4.0",
     "inngest": "^3.13.0",
     "next": "13.5.6",
