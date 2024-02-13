@@ -1,11 +1,11 @@
-import { BaseSepoliaTestnet } from "@thirdweb-dev/chains";
+import { BaseSepoliaTestnet, Base } from "@thirdweb-dev/chains";
 import { ThirdwebSDK } from "@thirdweb-dev/sdk";
 import { contractAddress, openai } from ".";
 import { BigNumberish } from "ethers";
 
 export const thirdweb = ThirdwebSDK.fromPrivateKey(
   process.env.PRIVATE_KEY!,
-  BaseSepoliaTestnet,
+  process.env.USE_MAINNET ? Base : BaseSepoliaTestnet,
   {
     secretKey: process.env.THIRD_WEB_SECRET_KEY,
   }
