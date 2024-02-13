@@ -149,17 +149,10 @@ export default async function Home({
           return ErrorPage({ image: "taken" });
         }
 
-        console.time("minting NFT");
-        const nft = await contract.mintTo(address, {
-          name: `"${formattedInput}"`,
-          description: `A unique, AI-generated artwork minted via a Farcaster Frame with $DEGEN tips.`,
-          image: "ipfs://QmPF9sDizL5AHCaw1PsZhrua4a1r6AZNxkkFNv8Qz1zi7y",
-        });
-
         await inngest.send({
-          name: "generate-metadata",
+          name: "mint-nft",
           data: {
-            tokenId: nft.id,
+            address,
             prompt: formattedInput,
           },
         });
@@ -171,9 +164,7 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/success.png`} />
-            <FrameButton
-              href={`https://testnets.opensea.io/assets/base-sepolia/${contractAddress}/${nft.id}`}
-            >
+            <FrameButton href={`https://opensea.io/${address}`}>
               View
             </FrameButton>
           </FrameContainer>
