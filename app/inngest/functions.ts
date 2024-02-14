@@ -3,7 +3,7 @@ import { openai, contract } from "../utils";
 
 export const mintNft = inngest.createFunction(
   { id: "mint-nft" },
-  { event: "mint-nft", timeout: 20000 },
+  { event: "mint-nft" },
   async ({ event, step }) => {
     const { address, prompt } = event.data;
 
@@ -12,8 +12,9 @@ export const mintNft = inngest.createFunction(
       "Generate image",
       async () =>
         await openai.images.generate({
-          model: "dall-e-2",
-          prompt: `Craft a modern art piece that embodies the essence of '${prompt}' using a fusion of abstract shapes and a vivid color scheme to evoke deep emotions and provoke thought.`,
+          model: "dall-e-3",
+          prompt: `an abstract modern art piece that embodies the essence of '${prompt}'`,
+          style: "vivid"
         })
     );
 
