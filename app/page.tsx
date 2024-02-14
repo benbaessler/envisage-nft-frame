@@ -11,7 +11,13 @@ import {
 } from "frames.js/next/server";
 import Link from "next/link";
 import { getAddressForFid } from "frames.js";
-import { HOST, alreadyClaimed, neynar, supplyMinted } from "./utils";
+import {
+  HOST,
+  alreadyClaimed,
+  contractAddress,
+  neynar,
+  supplyMinted,
+} from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 import { inngest } from "./inngest/client";
@@ -28,7 +34,7 @@ const reducer: FrameReducer<State> = (state, action) => {
       state.page === "create" &&
       action.postBody?.untrustedData.buttonIndex === 1
         ? "minting"
-        : "create",
+        : "create"
   };
 };
 
@@ -44,7 +50,7 @@ export default async function Home({
       previousFrame={previousFrame}
     >
       <FrameImage src={`${HOST}/${image}.png`} />
-      <FrameButton onClick={dispatch}>Try again</FrameButton>
+      <FrameButton>Try again</FrameButton>
     </FrameContainer>
   );
 
@@ -143,7 +149,9 @@ export default async function Home({
             previousFrame={previousFrame}
           >
             <FrameImage src={`${HOST}/success.png`} />
-            <FrameButton href={`https://opensea.io/${address}`}>
+            <FrameButton
+              href={`https://opensea.io/${address}?search[collections][0]=envisage`}
+            >
               View
             </FrameButton>
           </FrameContainer>
