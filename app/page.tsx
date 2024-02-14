@@ -11,13 +11,7 @@ import {
 } from "frames.js/next/server";
 import Link from "next/link";
 import { getAddressForFid } from "frames.js";
-import {
-  HOST,
-  alreadyClaimed,
-  contractAddress,
-  neynar,
-  supplyMinted,
-} from "./utils";
+import { HOST, alreadyClaimed, openai, neynar, supplyMinted } from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 import { inngest } from "./inngest/client";
@@ -34,7 +28,7 @@ const reducer: FrameReducer<State> = (state, action) => {
       state.page === "create" &&
       action.postBody?.untrustedData.buttonIndex === 1
         ? "minting"
-        : "create"
+        : "create",
   };
 };
 
@@ -89,8 +83,9 @@ export default async function Home({
         const formattedInput =
           inputText.charAt(0).toUpperCase() + inputText.slice(1);
 
-        const [isSupplyMinted, address, promptUsed, hasTipped] =
+        const [validInputRes, isSupplyMinted, address, promptUsed, hasTipped] =
           await Promise.all([
+            openai.moderations.create({ input: inputText }),
             supplyMinted(),
             getAddressForFid({ fid: requesterFid }),
             prisma.prompt.findUnique({
@@ -117,6 +112,8 @@ export default async function Home({
         const claimed = await alreadyClaimed(address);
         if (process.env.USE_MAINNET === "true" && claimed)
           return ErrorPage({ image: "already-claimed" });
+
+        if (validInputRes.results[0]?.flagged) return ErrorPage({ image: "flagged" });
 
         if (promptUsed) return ErrorPage({ image: "taken" });
 
