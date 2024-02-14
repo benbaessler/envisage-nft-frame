@@ -3,7 +3,7 @@ import { openai, contract } from "../utils";
 
 export const mintNft = inngest.createFunction(
   { id: "mint-nft" },
-  { event: "mint-nft" },
+  { event: "mint-nft", timeout: 20000 },
   async ({ event, step }) => {
     const { address, prompt } = event.data;
 
