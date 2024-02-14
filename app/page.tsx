@@ -113,7 +113,7 @@ export default async function Home({
         if (process.env.USE_MAINNET === "true" && claimed)
           return ErrorPage({ image: "already-claimed" });
 
-        if (validInputRes.results[0]?.flagged) return ErrorPage({ image: "flagged" });
+        if (validInputRes.results[0]?.flagged || inputText.length > 50) return ErrorPage({ image: "invalid-input" });
 
         if (promptUsed) return ErrorPage({ image: "taken" });
 
