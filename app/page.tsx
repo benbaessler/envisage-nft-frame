@@ -14,29 +14,12 @@ import { getAddressForFid } from "frames.js";
 import {
   HOST,
   alreadyClaimed,
-  contract,
-  contractAddress,
   neynar,
   supplyMinted,
 } from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
-import { Metadata } from "next";
 import { inngest } from "./inngest/client";
-
-export async function generateMetadata(): Promise<Metadata> {
-  return {
-    title: "Envisage NFT Generator",
-    description:
-      "Generate your own unique, generative AI art piece in a Farcaster Frame for $DEGEN.",
-    openGraph: {
-      title: "Envisage NFT Generator",
-      description:
-        "Generate your own unique, generative AI art piece in a Farcaster Frame for $DEGEN.",
-      images: [`${HOST}/cover.png`],
-    },
-  };
-}
 
 type State = {
   page: string;
