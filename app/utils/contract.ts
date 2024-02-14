@@ -5,7 +5,7 @@ import { BigNumberish } from "ethers";
 
 export const thirdweb = ThirdwebSDK.fromPrivateKey(
   process.env.PRIVATE_KEY!,
-  process.env.USE_MAINNET ? Base : BaseSepoliaTestnet,
+  process.env.USE_MAINNET === "true" ? Base : BaseSepoliaTestnet,
   {
     secretKey: process.env.THIRD_WEB_SECRET_KEY,
   }

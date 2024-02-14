@@ -11,12 +11,7 @@ import {
 } from "frames.js/next/server";
 import Link from "next/link";
 import { getAddressForFid } from "frames.js";
-import {
-  HOST,
-  alreadyClaimed,
-  neynar,
-  supplyMinted,
-} from "./utils";
+import { HOST, alreadyClaimed, neynar, supplyMinted } from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 import { inngest } from "./inngest/client";
@@ -114,7 +109,8 @@ export default async function Home({
 
         // Checks if the user has already claimed an NFT
         const claimed = await alreadyClaimed(address);
-        if (claimed) return ErrorPage({ image: "already-claimed" });
+        if (process.env.USE_MAINNET === "true" && claimed)
+          return ErrorPage({ image: "already-claimed" });
 
         if (promptUsed) return ErrorPage({ image: "taken" });
 
