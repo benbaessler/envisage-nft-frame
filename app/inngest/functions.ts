@@ -13,8 +13,7 @@ export const mintNft = inngest.createFunction(
       async () =>
         await openai.images.generate({
           model: "dall-e-3",
-          prompt: `an abstract modern art piece that embodies the essence of '${prompt}'`,
-          style: "vivid"
+          prompt: `a modern art piece that embodies the essence of '${prompt}'`
         })
     );
 
