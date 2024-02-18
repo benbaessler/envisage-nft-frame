@@ -76,8 +76,8 @@ export default async function Home({
     if (state.page === "minting") {
       try {
         console.log("Starting process");
-        const castHash = "0xb81fe6fa2541efd2c9be281538c63cbae5c13987";
-        // const cashHash = castId?.hash!;
+        // const castHash = "0xb81fe6fa2541efd2c9be281538c63cbae5c13987";
+        const castHash = castId?.hash!;
 
         if (!inputText) return ErrorPage({ image: "missing-prompt" });
 
