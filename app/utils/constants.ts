@@ -7,4 +7,4 @@ export const neynar = new NeynarAPIClient(process.env.NEYNAR_API_KEY ?? "");
 export const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? "" });
 
 // Testnet contract
-export const contractAddress = process.env.CONTRACT_ADDRESS!;
+export const contractAddress = process.env.CONTRACT_ADDRESS! as `0x${string}`;

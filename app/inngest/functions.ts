@@ -1,5 +1,5 @@
 import { inngest } from "./client";
-import { openai, contract } from "../utils";
+import { openai, mintWithPaymaster } from "../utils";
 
 export const mintNft = inngest.createFunction(
   { id: "mint-nft" },
@@ -17,14 +17,16 @@ export const mintNft = inngest.createFunction(
         })
     );
 
-    await step.run("Mint NFT", async () => {
-      await contract.mintTo(address, {
-        name: `"${prompt}"`,
-        description: `A unique, AI-generated, "${prompt}"-themed artwork minted via a Farcaster Frame with $DEGEN tips.`,
-        image: image.data[0]?.url,
-      });
-    });
+    const txHash = await step.run(
+      "Mint NFT",
+      async () =>
+        await mintWithPaymaster(address, {
+          name: `"${prompt}"`,
+          description: `A unique, AI-generated, "${prompt}"-themed artwork minted via a Farcaster Frame with $DEGEN tips.`,
+          image: image.data[0]?.url,
+        })
+    );
 
-    return true;
+    return txHash;
   }
 );
