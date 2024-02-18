@@ -11,9 +11,10 @@ const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
 const chain = process.env.USE_MAINNET === "true" ? "base" : "base-sepolia";
 const paymasterUrl = `https://api.pimlico.io/v2/${chain}/rpc?apikey=${process.env.PIMLICO_API_KEY}`;
 const bundlerUrl = `https://api.pimlico.io/v1/${chain}/rpc?apikey=${process.env.PIMLICO_API_KEY}`;
+const rpcUrl = process.env.USE_MAINNET === "true" ? process.env.BASE_RPC_URL : process.env.BASE_SEPOLIA_RPC_URL;
 
 const publicClient = createPublicClient({
-  transport: http(process.env.BASE_SEPOLIA_RPC_URL!),
+  transport: http(rpcUrl),
 });
 
 export const paymasterClient = createPimlicoPaymasterClient({
