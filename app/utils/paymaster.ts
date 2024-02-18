@@ -8,7 +8,7 @@ import { contractAddress, generateCalldata, uploadMetadata } from ".";
 
 const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
 
-const chain = process.env.USE_MAINNET ? "base" : "base-sepolia";
+const chain = process.env.USE_MAINNET === "true" ? "base" : "base-sepolia";
 const paymasterUrl = `https://api.pimlico.io/v2/${chain}/rpc?apikey=${process.env.PIMLICO_API_KEY}`;
 const bundlerUrl = `https://api.pimlico.io/v1/${chain}/rpc?apikey=${process.env.PIMLICO_API_KEY}`;
 
