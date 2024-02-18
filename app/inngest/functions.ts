@@ -1,5 +1,5 @@
 import { inngest } from "./client";
-import { openai, mintWithPaymaster } from "../utils";
+import { openai, mintWithPaymaster, contract } from "../utils";
 import * as Sentry from "@sentry/node";
 
 Sentry.init({
@@ -55,7 +55,7 @@ export const mintNft = inngest.createFunction(
     const txHash = await step.run(
       "Mint NFT",
       async () =>
-        await mintWithPaymaster(address, {
+        await contract.mintTo(address, {
           name: `"${prompt}"`,
           description: `A unique, AI-generated, "${prompt}"-themed artwork minted via a Farcaster Frame with $DEGEN tips.`,
           image: image.data[0]?.url,
