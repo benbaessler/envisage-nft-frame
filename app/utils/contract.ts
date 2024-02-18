@@ -23,5 +23,5 @@ export const alreadyClaimed = async (address: string): Promise<boolean> => {
 // check if tokenId is larger than 499
 export const supplyMinted = async () => {
   const totalSupply = await contract.totalSupply();
-  return totalSupply.toNumber() > 999;
+  return totalSupply.toNumber() > 499;
 };
