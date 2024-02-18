@@ -187,10 +187,10 @@ export default async function Home({
   // then, when done, return next frame
   return (
     <div className="p-4">
-      frames.js starter kit.{" "}
-      <Link href={`/debug?url=${HOST}`} className="underline">
+      Envisage NFT Frame
+      {/* <Link href={`/debug?url=${HOST}`} className="underline">
         Debug
-      </Link>
+      </Link> */}
       <FrameContainer
         postUrl="/frames"
         state={state}
