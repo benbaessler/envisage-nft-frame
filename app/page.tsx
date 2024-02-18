@@ -15,6 +15,7 @@ import { HOST, alreadyClaimed, openai, neynar, supplyMinted } from "./utils";
 import prisma from "./lib/prisma";
 import { isApiErrorResponse } from "@neynar/nodejs-sdk";
 import { inngest } from "./inngest/client";
+import { DEBUG_HUB_OPTIONS } from "./debug/constants";
 
 type State = {
   page: string;
@@ -51,8 +52,7 @@ export default async function Home({
   const previousFrame = getPreviousFrame<State>(searchParams);
 
   const frameMessage = await getFrameMessage(previousFrame.postBody, {
-    hubHttpUrl: "https://nemes.farcaster.xyz:2281",
-    fetchHubContext: true,
+    ...DEBUG_HUB_OPTIONS
   });
 
   if (frameMessage && !frameMessage?.isValid) {
@@ -75,6 +75,7 @@ export default async function Home({
 
     if (state.page === "minting") {
       try {
+        console.log("Starting process");
         const castHash = "0xb81fe6fa2541efd2c9be281538c63cbae5c13987";
         // const cashHash = castId?.hash!;
 
@@ -82,6 +83,8 @@ export default async function Home({
 
         const formattedInput =
           inputText.charAt(0).toUpperCase() + inputText.slice(1);
+
+        console.log("Fetching data");
 
         const [validInputRes, isSupplyMinted, address, promptUsed, hasTipped] =
           await Promise.all([
@@ -102,6 +105,15 @@ export default async function Home({
               ),
           ]);
 
+        console.log(
+          "Data fetched",
+          validInputRes,
+          isSupplyMinted,
+          address,
+          promptUsed,
+          hasTipped
+        );
+
         // Checks if supply was minted
         if (isSupplyMinted) return ErrorPage({ image: "supply-minted" });
 
@@ -113,15 +125,19 @@ export default async function Home({
         if (process.env.USE_MAINNET === "true" && claimed)
           return ErrorPage({ image: "already-claimed" });
 
-        if (validInputRes.results[0]?.flagged || inputText.length > 50) return ErrorPage({ image: "invalid-input" });
+        if (validInputRes.results[0]?.flagged || inputText.length > 50)
+          return ErrorPage({ image: "invalid-input" });
 
         if (promptUsed) return ErrorPage({ image: "taken" });
 
         // Checks if the user tipped at least 999 $DEGEN in the replies
         if (!hasTipped) return ErrorPage({ image: "no-tip" });
 
+        console.log("Passed checks");
+
         // Stores input in database
         try {
+          console.log("Attempting to write to DB");
           await prisma.prompt.create({
             data: {
               id: inputText.toLowerCase(),
@@ -130,6 +146,8 @@ export default async function Home({
         } catch (error) {
           return ErrorPage({ image: "taken" });
         }
+
+        console.log("Attempting to mint NFT");
 
         await inngest.send({
           name: "mint-nft",
@@ -147,7 +165,8 @@ export default async function Home({
           >
             <FrameImage src={`${HOST}/success.png`} />
             <FrameButton
-              href={`https://opensea.io/${address}?search[collections][0]=envisage`}
+              action="link"
+              target={`https://opensea.io/${address}?search[collections][0]=envisage`}
             >
               View
             </FrameButton>
@@ -179,7 +198,7 @@ export default async function Home({
       >
         <FrameImage src={`${HOST}/cover.png`} />
         <FrameInput text="A word or phrase to envisage" />
-        <FrameButton onClick={dispatch}>Create ✨</FrameButton>
+        <FrameButton>Create ✨</FrameButton>
       </FrameContainer>
     </div>
   );
