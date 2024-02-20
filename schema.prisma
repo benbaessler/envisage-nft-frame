@@ -10,4 +10,5 @@ datasource db {
 
 model Prompt {
   id String @id @default(cuid())
+  minted Boolean @default(false)
 }
