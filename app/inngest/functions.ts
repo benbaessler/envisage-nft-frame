@@ -1,6 +1,7 @@
 import { inngest } from "./client";
 import { openai, mintWithPaymaster, contract } from "../utils";
 import * as Sentry from "@sentry/node";
+import prisma from "../lib/prisma";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
@@ -41,6 +42,16 @@ export const mintNft = inngest.createFunction(
   { event: "mint-nft" },
   async ({ event, step }) => {
     const { address, prompt } = event.data;
+
+    const promptStore = await prisma.prompt.findUnique({
+      where: { id: prompt.toLowerCase() },
+    });
+    if (promptStore?.minted) return;
+
+    await prisma.prompt.update({
+      where: { id: prompt.toLowerCase() },
+      data: { minted: true },
+    });
 
     // Generates the image
     const image = await step.run(
