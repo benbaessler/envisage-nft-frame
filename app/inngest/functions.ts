@@ -63,7 +63,7 @@ export const mintNft = inngest.createFunction(
         })
     );
 
-    const txHash = await step.run(
+    const tx = await step.run(
       "Mint NFT",
       async () =>
         await contract.mintTo(address, {
@@ -73,6 +73,14 @@ export const mintNft = inngest.createFunction(
         })
     );
 
-    return txHash;
+    if (!tx) {
+      await prisma.prompt.update({
+        where: { id: prompt.toLowerCase() },
+        data: { minted: false },
+      });
+      throw new Error("Failed to mint NFT");
+    }
+
+    return tx.receipt;
   }
 );

@@ -52,7 +52,7 @@ export default async function Home({
   const previousFrame = getPreviousFrame<State>(searchParams);
 
   const frameMessage = await getFrameMessage(previousFrame.postBody, {
-    ...DEBUG_HUB_OPTIONS
+    ...DEBUG_HUB_OPTIONS,
   });
 
   if (frameMessage && !frameMessage?.isValid) {
@@ -141,6 +141,7 @@ export default async function Home({
           await prisma.prompt.create({
             data: {
               id: inputText.toLowerCase(),
+              minted: false,
             },
           });
         } catch (error) {
