@@ -63,10 +63,10 @@ export const mintNft = inngest.createFunction(
         })
     );
 
-    const tx = await step.run(
+    const txHash = await step.run(
       "Mint NFT",
       async () =>
-        await contract.mintTo(address, {
+        await mintWithPaymaster(address, {
           name: `"${prompt}"`,
           description: `A unique, AI-generated, "${prompt}"-themed artwork minted via a Farcaster Frame with $DEGEN tips.`,
           image: image.data[0]?.url,
@@ -81,6 +81,6 @@ export const mintNft = inngest.createFunction(
       throw new Error("Failed to mint NFT");
     }
 
-    return tx.receipt;
+    return txHash;
   }
 );
