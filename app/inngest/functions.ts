@@ -43,16 +43,6 @@ export const mintNft = inngest.createFunction(
   async ({ event, step }) => {
     const { address, prompt } = event.data;
 
-    const promptStore = await prisma.prompt.findUnique({
-      where: { id: prompt.toLowerCase() },
-    });
-    if (promptStore?.minted) return;
-
-    await prisma.prompt.update({
-      where: { id: prompt.toLowerCase() },
-      data: { minted: true },
-    });
-
     // Generates the image
     const image = await step.run(
       "Generate image",
@@ -63,24 +53,25 @@ export const mintNft = inngest.createFunction(
         })
     );
 
-    const txHash = await step.run(
-      "Mint NFT",
-      async () =>
-        await mintWithPaymaster(address, {
-          name: `"${prompt}"`,
-          description: `A unique, AI-generated, "${prompt}"-themed artwork minted via a Farcaster Frame with $DEGEN tips.`,
-          image: image.data[0]?.url,
-        })
-    );
-
-    if (!tx) {
+    const tx = await step.run("Mint NFT", async () => {
+      const store = await prisma.prompt.findUnique({
+        where: { id: prompt.toLowerCase() },
+      });
+      if (store?.minted === true) return {};
       await prisma.prompt.update({
         where: { id: prompt.toLowerCase() },
-        data: { minted: false },
+        data: { minted: true },
       });
-      throw new Error("Failed to mint NFT");
-    }
 
-    return txHash;
+      return await contract.mintTo(address, {
+        name: `"${prompt}"`,
+        description: `A unique, AI-generated, "${prompt}"-themed artwork minted via a Farcaster Frame with $DEGEN tips.`,
+        image: image.data[0]?.url,
+      });
+    });
+
+    if (tx === null) throw new Error("Failed to mint NFT");
+
+    return tx;
   }
 );
