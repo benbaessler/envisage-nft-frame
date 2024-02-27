@@ -75,16 +75,12 @@ export default async function Home({
 
     if (state.page === "minting") {
       try {
-        console.log("Starting process");
-        // const castHash = "0xb81fe6fa2541efd2c9be281538c63cbae5c13987";
         const castHash = castId?.hash!;
 
         if (!inputText) return ErrorPage({ image: "missing-prompt" });
 
         const formattedInput =
           inputText.charAt(0).toUpperCase() + inputText.slice(1);
-
-        console.log("Fetching data");
 
         const [validInputRes, isSupplyMinted, address, promptUsed, hasTipped] =
           await Promise.all([
@@ -105,15 +101,6 @@ export default async function Home({
               ),
           ]);
 
-        console.log(
-          "Data fetched",
-          validInputRes,
-          isSupplyMinted,
-          address,
-          promptUsed,
-          hasTipped
-        );
-
         // Checks if supply was minted
         if (isSupplyMinted) return ErrorPage({ image: "supply-minted" });
 
@@ -133,11 +120,8 @@ export default async function Home({
         // Checks if the user tipped at least 999 $DEGEN in the replies
         if (!hasTipped) return ErrorPage({ image: "no-tip" });
 
-        console.log("Passed checks");
-
         // Stores input in database
         try {
-          console.log("Attempting to write to DB");
           await prisma.prompt.create({
             data: {
               id: inputText.toLowerCase(),
@@ -147,8 +131,6 @@ export default async function Home({
         } catch (error) {
           return ErrorPage({ image: "taken" });
         }
-
-        console.log("Attempting to mint NFT");
 
         await inngest.send({
           name: "mint-nft",
