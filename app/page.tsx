@@ -28,7 +28,7 @@ const reducer: FrameReducer<State> = (state, action) => {
     page:
       state.page === "create" &&
       action.postBody?.untrustedData.buttonIndex === 1
-        ? "minting"
+        ? "closed"
         : "create",
   };
 };
@@ -72,6 +72,8 @@ export default async function Home({
 
   if (frameMessage) {
     const { inputText, castId, requesterFid } = frameMessage;
+
+    if (state.page === "closed") return ErrorPage({ image: "mint-closed" });
 
     if (state.page === "minting") {
       try {
